@@ -1,0 +1,29 @@
+{
+  "name": "vrc-lighting-controller",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@10.24.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-shell": "^2",
+    "pinia": "^3",
+    "vue": "^3"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "@vitejs/plugin-vue": "^5",
+    "typescript": "^5",
+    "vite": "^6",
+    "vue-tsc": "^2"
+  }
+}

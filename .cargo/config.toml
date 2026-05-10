@@ -1,0 +1,8 @@
+[env]
+RUST_SPOUT2_ALLOW_FETCH = "1"
+
+[build]
+jobs = 16
+
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld"

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicegoodthings/tauri-schema/refs/heads/main/tauri.conf.schema.json",
+  "productName": "VRC Lighting Controller",
+  "version": "0.1.0",
+  "identifier": "com.vrc-lighting-controller.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "VRC Lighting Controller",
+        "width": 1280,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true
+      },
+      {
+        "label": "output",
+        "title": "VRC Lighting Output",
+        "url": "output.html",
+        "width": 90,
+        "height": 720,
+        "resizable": false,
+        "fullscreen": false,
+        "decorations": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  }
+}

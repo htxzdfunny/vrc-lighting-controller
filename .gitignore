@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+src-tauri/target/
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE / Editor
+.idea/
+*.swp
+*.swo
+*~
+.vscode/settings.json
+
+# Cursor
+.cursor/
+.claude/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Tauri
+src-tauri/gen/
+
+# Rust
+**/*.rs.bk
+
+# pnpm
+.pnpm-store/
+
+# Local tool configs
+
+.npmrc
+
+LESSONS_LEARNED.md
