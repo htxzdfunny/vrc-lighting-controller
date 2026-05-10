@@ -1,7 +1,10 @@
 use std::sync::Arc;
 use std::path::PathBuf;
 use tauri::{State, AppHandle, Manager};
-use crate::state::{AppState, LightingState, EffectState, CueEntry, AppConfig};
+use crate::state::{
+    AppState, LightingState, EffectState, CueEntry, AppConfig,
+    PaletteSlot, StateSnapshot, PALETTE_SLOT_COUNT, SNAPSHOT_SLOT_COUNT,
+};
 use crate::state::fixture::{Fixture, Color};
 use crate::state::group::Group;
 
@@ -66,6 +69,46 @@ pub fn set_fixture_strobe(state: State<'_, Arc<AppState>>, fixture_id: usize, st
     if let Some(f) = lighting.fixtures.get_mut(fixture_id) {
         f.strobe_on = strobe_on;
         f.strobe_speed = strobe_speed.clamp(0.0, 30.0);
+    }
+    drop(lighting);
+    state.bump_version();
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn set_selected_color(state: State<'_, Arc<AppState>>, fixture_ids: Vec<usize>, r: f64, g: f64, b: f64) {
+    let mut lighting = state.lighting.write();
+    for id in fixture_ids {
+        if let Some(f) = lighting.fixtures.get_mut(id) {
+            f.color = Color { r, g, b };
+        }
+    }
+    drop(lighting);
+    state.bump_version();
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn set_selected_position(state: State<'_, Arc<AppState>>, fixture_ids: Vec<usize>, pan: f64, tilt: f64) {
+    let pan = pan.clamp(-180.0, 180.0);
+    let tilt = tilt.clamp(-180.0, 180.0);
+    let mut lighting = state.lighting.write();
+    for id in fixture_ids {
+        if let Some(f) = lighting.fixtures.get_mut(id) {
+            f.pan = pan;
+            f.tilt = tilt;
+        }
+    }
+    drop(lighting);
+    state.bump_version();
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn set_selected_dimmer(state: State<'_, Arc<AppState>>, fixture_ids: Vec<usize>, dimmer: f64) {
+    let dimmer = dimmer.clamp(0.0, 1.0);
+    let mut lighting = state.lighting.write();
+    for id in fixture_ids {
+        if let Some(f) = lighting.fixtures.get_mut(id) {
+            f.dimmer = dimmer;
+        }
     }
     drop(lighting);
     state.bump_version();
@@ -287,4 +330,193 @@ pub fn import_state(state: State<'_, Arc<AppState>>, path: String) -> Result<(),
     }
     state.bump_version();
     Ok(())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn set_palette_slot(state: State<'_, Arc<AppState>>, index: usize, color: Option<Color>) {
+    if index >= PALETTE_SLOT_COUNT {
+        return;
+    }
+    {
+        let mut lighting = state.lighting.write();
+        ensure_palette_len(&mut lighting);
+        if let Some(slot) = lighting.color_palette.get_mut(index) {
+            *slot = PaletteSlot { color };
+        }
+    }
+    state.bump_version();
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn apply_palette_slot(
+    state: State<'_, Arc<AppState>>,
+    index: usize,
+    fixture_ids: Vec<usize>,
+) {
+    if index >= PALETTE_SLOT_COUNT {
+        return;
+    }
+    {
+        let mut lighting = state.lighting.write();
+        ensure_palette_len(&mut lighting);
+        let color = lighting
+            .color_palette
+            .get(index)
+            .and_then(|s| s.color.clone())
+            .unwrap_or_else(|| Color { r: 0.0, g: 0.0, b: 0.0 });
+        let target_ids: Vec<usize> = if fixture_ids.is_empty() {
+            (0..lighting.fixtures.len()).collect()
+        } else {
+            fixture_ids
+        };
+        for id in target_ids {
+            if let Some(f) = lighting.fixtures.get_mut(id) {
+                f.color = color.clone();
+            }
+        }
+    }
+    state.bump_version();
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn save_snapshot(state: State<'_, Arc<AppState>>, index: usize, label: String) {
+    if index >= SNAPSHOT_SLOT_COUNT {
+        return;
+    }
+    {
+        let mut lighting = state.lighting.write();
+        ensure_snapshot_len(&mut lighting);
+        let snapshot = StateSnapshot {
+            label,
+            fixtures: lighting.fixtures.clone(),
+        };
+        if let Some(slot) = lighting.state_snapshots.get_mut(index) {
+            *slot = Some(snapshot);
+        }
+    }
+    state.bump_version();
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn recall_snapshot(state: State<'_, Arc<AppState>>, index: usize) {
+    if index >= SNAPSHOT_SLOT_COUNT {
+        return;
+    }
+    {
+        let mut lighting = state.lighting.write();
+        ensure_snapshot_len(&mut lighting);
+        let snapshot_opt = lighting.state_snapshots.get(index).cloned().flatten();
+        if let Some(snapshot) = snapshot_opt {
+            // 保留每盏灯的 sync_* 设置，不被快照覆盖
+            let live_sync: Vec<(bool, bool)> = lighting
+                .fixtures
+                .iter()
+                .map(|f| (f.sync_master_fader, f.sync_master_knob))
+                .collect();
+            let count = snapshot.fixtures.len().min(lighting.fixtures.len());
+            for i in 0..count {
+                let mut copy = snapshot.fixtures[i].clone();
+                if let Some(sync) = live_sync.get(i) {
+                    copy.sync_master_fader = sync.0;
+                    copy.sync_master_knob = sync.1;
+                }
+                lighting.fixtures[i] = copy;
+            }
+        }
+    }
+    state.bump_version();
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn clear_snapshot(state: State<'_, Arc<AppState>>, index: usize) {
+    if index >= SNAPSHOT_SLOT_COUNT {
+        return;
+    }
+    {
+        let mut lighting = state.lighting.write();
+        ensure_snapshot_len(&mut lighting);
+        if let Some(slot) = lighting.state_snapshots.get_mut(index) {
+            *slot = None;
+        }
+    }
+    state.bump_version();
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn set_fixture_sync(
+    state: State<'_, Arc<AppState>>,
+    fixture_id: usize,
+    sync_fader: bool,
+    sync_knob: bool,
+) {
+    {
+        let mut lighting = state.lighting.write();
+        if let Some(f) = lighting.fixtures.get_mut(fixture_id) {
+            f.sync_master_fader = sync_fader;
+            f.sync_master_knob = sync_knob;
+        }
+    }
+    state.bump_version();
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn set_fixture_on(state: State<'_, Arc<AppState>>, fixture_id: usize, on: bool) {
+    {
+        let mut lighting = state.lighting.write();
+        if let Some(f) = lighting.fixtures.get_mut(fixture_id) {
+            f.is_on = on;
+        }
+    }
+    state.bump_version();
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn set_button_mode(state: State<'_, Arc<AppState>>, enabled: bool) {
+    {
+        let mut lighting = state.lighting.write();
+        lighting.button_mode = enabled;
+    }
+    state.bump_version();
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn apply_master_fader(state: State<'_, Arc<AppState>>, value: f64) {
+    let v = value.clamp(0.0, 1.0);
+    let tilt = v * 360.0 - 180.0;
+    {
+        let mut lighting = state.lighting.write();
+        for f in lighting.fixtures.iter_mut() {
+            if f.sync_master_fader {
+                f.tilt = tilt;
+            }
+        }
+    }
+    state.bump_version();
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn apply_master_knob(state: State<'_, Arc<AppState>>, value: f64) {
+    let v = value.clamp(0.0, 1.0);
+    let pan = v * 360.0 - 180.0;
+    {
+        let mut lighting = state.lighting.write();
+        for f in lighting.fixtures.iter_mut() {
+            if f.sync_master_knob {
+                f.pan = pan;
+            }
+        }
+    }
+    state.bump_version();
+}
+
+fn ensure_palette_len(lighting: &mut LightingState) {
+    while lighting.color_palette.len() < PALETTE_SLOT_COUNT {
+        lighting.color_palette.push(PaletteSlot::default());
+    }
+}
+
+fn ensure_snapshot_len(lighting: &mut LightingState) {
+    while lighting.state_snapshots.len() < SNAPSHOT_SLOT_COUNT {
+        lighting.state_snapshots.push(None);
+    }
 }

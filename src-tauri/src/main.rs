@@ -12,6 +12,15 @@ use std::sync::Arc;
 use tauri::Manager;
 use state::AppState;
 
+#[tauri::command]
+fn get_app_version() -> String {
+    if cfg!(debug_assertions) {
+        format!("Dev-{}", env!("GIT_HASH"))
+    } else {
+        format!("Rel-{}", env!("GIT_HASH"))
+    }
+}
+
 fn init_logger() {
     use simplelog::*;
     use std::fs::File;
@@ -85,12 +94,16 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            get_app_version,
             ipc::get_state,
             ipc::set_fixture,
             ipc::set_fixture_color,
             ipc::set_fixture_position,
             ipc::set_fixture_dimmer,
             ipc::set_fixture_strobe,
+            ipc::set_selected_color,
+            ipc::set_selected_position,
+            ipc::set_selected_dimmer,
             ipc::select_fixtures,
             ipc::create_group,
             ipc::delete_group,
@@ -112,6 +125,16 @@ fn main() {
             ipc::reset_state,
             ipc::export_state,
             ipc::import_state,
+            ipc::set_palette_slot,
+            ipc::apply_palette_slot,
+            ipc::save_snapshot,
+            ipc::recall_snapshot,
+            ipc::clear_snapshot,
+            ipc::set_fixture_sync,
+            ipc::set_fixture_on,
+            ipc::set_button_mode,
+            ipc::apply_master_fader,
+            ipc::apply_master_knob,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

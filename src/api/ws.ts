@@ -1,4 +1,4 @@
-import type { LightingState, EffectState } from "../types/lighting";
+import type { LightingState, EffectState, Color } from "../types/lighting";
 
 type StateUpdateCallback = (state: LightingState) => void;
 type ConnectionCallback = (connected: boolean) => void;
@@ -168,5 +168,48 @@ export async function clearEffect() {
 
 export async function setConfig(config: Record<string, unknown>) {
   sendCommand({ type: "set_config", data: { config } });
+}
+
+export async function setPaletteSlot(index: number, color: Color | null) {
+  sendCommand({ type: "set_palette_slot", data: { index, color } });
+}
+
+export async function applyPaletteSlot(index: number, fixtureIds: number[]) {
+  sendCommand({ type: "apply_palette_slot", data: { index, fixture_ids: fixtureIds } });
+}
+
+export async function saveSnapshot(index: number, label: string) {
+  sendCommand({ type: "save_snapshot", data: { index, label } });
+}
+
+export async function recallSnapshot(index: number) {
+  sendCommand({ type: "recall_snapshot", data: { index } });
+}
+
+export async function clearSnapshot(index: number) {
+  sendCommand({ type: "clear_snapshot", data: { index } });
+}
+
+export async function setFixtureSync(fixtureId: number, syncFader: boolean, syncKnob: boolean) {
+  sendCommand({
+    type: "set_fixture_sync",
+    data: { fixture_id: fixtureId, sync_fader: syncFader, sync_knob: syncKnob },
+  });
+}
+
+export async function setFixtureOn(fixtureId: number, on: boolean) {
+  sendCommand({ type: "set_fixture_on", data: { fixture_id: fixtureId, on } });
+}
+
+export async function setButtonMode(enabled: boolean) {
+  sendCommand({ type: "set_button_mode", data: { enabled } });
+}
+
+export async function applyMasterFader(value: number) {
+  sendCommand({ type: "apply_master_fader", data: { value } });
+}
+
+export async function applyMasterKnob(value: number) {
+  sendCommand({ type: "apply_master_knob", data: { value } });
 }
 

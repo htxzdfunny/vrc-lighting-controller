@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import type { LightingState, EffectState, AppConfig } from "../types/lighting";
+import type { LightingState, EffectState, AppConfig, Color } from "../types/lighting";
 
 type StateUpdateCallback = (state: LightingState) => void;
 
@@ -8,21 +8,30 @@ type StateUpdateCallback = (state: LightingState) => void;
  * Subscribe to backend-initiated state changes (e.g. from LAN WebSocket clients).
  * Returns an unlisten function to cancel the subscription.
  */
+let _pendingStateFetch = false;
+
 export async function subscribeToStateChanges(
   callback: StateUpdateCallback
 ): Promise<UnlistenFn> {
   return listen<number>("state-changed", async () => {
+    if (_pendingStateFetch) return;
+    _pendingStateFetch = true;
     try {
       const state = await getState();
       callback(state);
     } catch {
       // ignore transient errors; next event will retry
     }
+    _pendingStateFetch = false;
   });
 }
 
 export async function getState(): Promise<LightingState> {
   return invoke<LightingState>("get_state");
+}
+
+export async function getAppVersion(): Promise<string> {
+  return invoke<string>("get_app_version");
 }
 
 export async function setFixtureColor(fixtureId: number, r: number, g: number, b: number) {
@@ -46,21 +55,15 @@ export async function selectFixtures(ids: number[]) {
 }
 
 export async function setSelectedColor(ids: number[], r: number, g: number, b: number) {
-  for (const id of ids) {
-    await invoke("set_fixture_color", { fixture_id: id, r, g, b });
-  }
+  await invoke("set_selected_color", { fixture_ids: ids, r, g, b });
 }
 
 export async function setSelectedPosition(ids: number[], pan: number, tilt: number) {
-  for (const id of ids) {
-    await invoke("set_fixture_position", { fixture_id: id, pan, tilt });
-  }
+  await invoke("set_selected_position", { fixture_ids: ids, pan, tilt });
 }
 
 export async function setSelectedDimmer(ids: number[], dimmer: number) {
-  for (const id of ids) {
-    await invoke("set_fixture_dimmer", { fixture_id: id, dimmer });
-  }
+  await invoke("set_selected_dimmer", { fixture_ids: ids, dimmer });
 }
 
 export async function createGroup(name: string, fixtureIds: number[]) {
@@ -119,4 +122,48 @@ export async function exportState(path: string) {
 
 export async function importState(path: string) {
   await invoke("import_state", { path });
+}
+
+export async function setPaletteSlot(index: number, color: Color | null) {
+  await invoke("set_palette_slot", { index, color });
+}
+
+export async function applyPaletteSlot(index: number, fixtureIds: number[]) {
+  await invoke("apply_palette_slot", { index, fixture_ids: fixtureIds });
+}
+
+export async function saveSnapshot(index: number, label: string) {
+  await invoke("save_snapshot", { index, label });
+}
+
+export async function recallSnapshot(index: number) {
+  await invoke("recall_snapshot", { index });
+}
+
+export async function clearSnapshot(index: number) {
+  await invoke("clear_snapshot", { index });
+}
+
+export async function setFixtureSync(fixtureId: number, syncFader: boolean, syncKnob: boolean) {
+  await invoke("set_fixture_sync", {
+    fixture_id: fixtureId,
+    sync_fader: syncFader,
+    sync_knob: syncKnob,
+  });
+}
+
+export async function setFixtureOn(fixtureId: number, on: boolean) {
+  await invoke("set_fixture_on", { fixture_id: fixtureId, on });
+}
+
+export async function setButtonMode(enabled: boolean) {
+  await invoke("set_button_mode", { enabled });
+}
+
+export async function applyMasterFader(value: number) {
+  await invoke("apply_master_fader", { value });
+}
+
+export async function applyMasterKnob(value: number) {
+  await invoke("apply_master_knob", { value });
 }

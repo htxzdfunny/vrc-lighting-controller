@@ -61,7 +61,9 @@ fn render_frame(state: &AppState) {
             now_secs,
         );
 
-        if strobe_visible {
+        if !fixture.is_on {
+            fill_block(&mut buffer, layout.b_x, layout.b_y, layout.block_w, layout.block_h, 0, 0, 0, 255);
+        } else if strobe_visible {
             let (r, g, b) = effective_color.to_rgb_u8(fixture.dimmer);
             fill_block(&mut buffer, layout.b_x, layout.b_y, layout.block_w, layout.block_h, r, g, b, 255);
         } else {

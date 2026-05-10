@@ -28,6 +28,10 @@ impl Color {
     }
 }
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Fixture {
     pub id: usize,
@@ -38,6 +42,12 @@ pub struct Fixture {
     pub dimmer: f64,
     pub strobe_on: bool,
     pub strobe_speed: f64,
+    #[serde(default = "default_true")]
+    pub is_on: bool,
+    #[serde(default = "default_true")]
+    pub sync_master_fader: bool,
+    #[serde(default = "default_true")]
+    pub sync_master_knob: bool,
 }
 
 impl Fixture {
@@ -51,6 +61,9 @@ impl Fixture {
             dimmer: 1.0,
             strobe_on: false,
             strobe_speed: 5.0,
+            is_on: true,
+            sync_master_fader: true,
+            sync_master_knob: true,
         }
     }
 

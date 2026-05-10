@@ -2,7 +2,7 @@
 import { reactive, watch } from "vue";
 import { useLightingStore } from "../stores/lighting";
 
-defineProps<{ open: boolean }>();
+const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ "update:open": [value: boolean] }>();
 
 const store = useLightingStore();
@@ -18,17 +18,31 @@ const form = reactive({
   output_window_visible: (store.config as any).output_window_visible ?? true,
 });
 
+function syncFormFromConfig(cfg: any) {
+  form.fixture_count = cfg.fixture_count;
+  form.output_fps = cfg.output_fps;
+  form.ndi_enabled = cfg.ndi_enabled;
+  form.ndi_name = cfg.ndi_name;
+  form.web_port = cfg.web_port;
+  form.spout_enabled = cfg.spout_enabled ?? false;
+  form.spout_name = cfg.spout_name ?? "VRC-Lighting-Spout";
+  form.output_window_visible = cfg.output_window_visible ?? true;
+}
+
+watch(
+  () => props.open,
+  (open) => {
+    if (open) syncFormFromConfig(store.config as any);
+  },
+  { immediate: true }
+);
+
 watch(
   () => store.config,
   (cfg) => {
-    form.fixture_count = cfg.fixture_count;
-    form.output_fps = cfg.output_fps;
-    form.ndi_enabled = cfg.ndi_enabled;
-    form.ndi_name = cfg.ndi_name;
-    form.web_port = cfg.web_port;
-    form.spout_enabled = (cfg as any).spout_enabled ?? false;
-    form.spout_name = (cfg as any).spout_name ?? "VRC-Lighting-Spout";
-    form.output_window_visible = (cfg as any).output_window_visible ?? true;
+    // Keep form stable while modal is open, so checkbox edits are not
+    // immediately overwritten by backend-pushed state snapshots.
+    if (!props.open) syncFormFromConfig(cfg as any);
   },
   { deep: true }
 );

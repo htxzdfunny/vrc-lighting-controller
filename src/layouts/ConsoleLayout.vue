@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed } from "vue";
 import { useLightingStore } from "../stores/lighting";
+import { api } from "../api/adapter";
 import XYPad from "../components/XYPad.vue";
 import ColorWheel from "../components/ColorWheel.vue";
 import FaderStrip from "../components/FaderStrip.vue";
@@ -10,11 +11,14 @@ import OutputPreview from "../components/OutputPreview.vue";
 import StatusStrip from "../components/StatusStrip.vue";
 import SettingsModal from "../components/SettingsModal.vue";
 
+defineEmits<{ "switch-layout": [target: string] }>();
+
 const store = useLightingStore();
 const settingOpen = ref(false);
 const narrowMode = ref(false);
 const narrowPreviewOpen = ref(false);
 const rootRef = ref<HTMLElement | null>(null);
+const appVersion = ref("");
 let resizeObserver: ResizeObserver | null = null;
 
 const fixture = computed(() => store.currentFixture);
@@ -73,6 +77,7 @@ async function toggleOutputWindow() {
 
 onMounted(() => {
   store.initConnection();
+  api.getAppVersion().then(v => { appVersion.value = v; });
   if (rootRef.value) {
     resizeObserver = new ResizeObserver((entries) => {
       const w = entries[0]?.contentRect.width ?? window.innerWidth;
@@ -90,7 +95,7 @@ onBeforeUnmount(() => {
 <template>
   <div ref="rootRef" class="console-layout" :class="{ narrow: narrowMode }">
     <header class="console-header">
-      <h1 class="logo">VRC Light Controller</h1>
+      <h1 class="logo">VRC Light Controller <span v-if="appVersion" class="version-tag">{{ appVersion }}</span></h1>
       <div class="status-bar">
         <span class="status-indicator" :class="{ online: store.connected }">
           {{ store.connected ? "已连接" : "离线" }}
@@ -102,6 +107,7 @@ onBeforeUnmount(() => {
         <button v-if="narrowMode" class="icon-btn" @click="narrowPreviewOpen = !narrowPreviewOpen">
           {{ narrowPreviewOpen ? "预览关" : "预览开" }}
         </button>
+        <button class="icon-btn" @click="$emit('switch-layout', 'perf')">演出</button>
         <button class="icon-btn" @click="settingOpen = true">设置</button>
       </div>
     </header>
@@ -275,6 +281,14 @@ onBeforeUnmount(() => {
   font-weight: 700;
   color: #e94560;
   letter-spacing: 0.05em;
+}
+
+.version-tag {
+  font-size: 0.65rem;
+  font-weight: 400;
+  color: #6b7a99;
+  margin-left: 0.4rem;
+  letter-spacing: 0;
 }
 
 .status-bar {

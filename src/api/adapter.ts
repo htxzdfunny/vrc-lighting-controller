@@ -1,4 +1,4 @@
-import type { LightingState, EffectState, AppConfig } from "../types/lighting";
+import type { LightingState, EffectState, AppConfig, Color } from "../types/lighting";
 import * as tauriApi from "./tauri";
 import * as wsApi from "./ws";
 
@@ -139,6 +139,51 @@ async function importState(path: string) {
   if (_isTauri) return tauriApi.importState(path);
 }
 
+async function setPaletteSlot(index: number, color: Color | null) {
+  return backend.setPaletteSlot(index, color);
+}
+
+async function applyPaletteSlot(index: number, fixtureIds: number[]) {
+  return backend.applyPaletteSlot(index, fixtureIds);
+}
+
+async function saveSnapshot(index: number, label: string) {
+  return backend.saveSnapshot(index, label);
+}
+
+async function recallSnapshot(index: number) {
+  return backend.recallSnapshot(index);
+}
+
+async function clearSnapshot(index: number) {
+  return backend.clearSnapshot(index);
+}
+
+async function setFixtureSync(fixtureId: number, syncFader: boolean, syncKnob: boolean) {
+  return backend.setFixtureSync(fixtureId, syncFader, syncKnob);
+}
+
+async function setFixtureOn(fixtureId: number, on: boolean) {
+  return backend.setFixtureOn(fixtureId, on);
+}
+
+async function setButtonMode(enabled: boolean) {
+  return backend.setButtonMode(enabled);
+}
+
+async function applyMasterFader(value: number) {
+  return backend.applyMasterFader(value);
+}
+
+async function applyMasterKnob(value: number) {
+  return backend.applyMasterKnob(value);
+}
+
+async function getAppVersion(): Promise<string> {
+  if (_isTauri) return tauriApi.getAppVersion();
+  return "Web";
+}
+
 export const api = {
   isTauri: _isTauri,
   init,
@@ -167,4 +212,15 @@ export const api = {
   resetState,
   exportState,
   importState,
+  setPaletteSlot,
+  applyPaletteSlot,
+  saveSnapshot,
+  recallSnapshot,
+  clearSnapshot,
+  setFixtureSync,
+  setFixtureOn,
+  setButtonMode,
+  applyMasterFader,
+  applyMasterKnob,
+  getAppVersion,
 };

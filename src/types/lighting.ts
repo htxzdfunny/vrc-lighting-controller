@@ -13,6 +13,18 @@ export interface Fixture {
   dimmer: number;
   strobe_on: boolean;
   strobe_speed: number;
+  is_on: boolean;
+  sync_master_fader: boolean;
+  sync_master_knob: boolean;
+}
+
+export interface PaletteSlot {
+  color: Color | null;
+}
+
+export interface StateSnapshot {
+  label: string;
+  fixtures: Fixture[];
 }
 
 export interface Group {
@@ -81,4 +93,10 @@ export interface LightingState {
   config: AppConfig;
   output_status: OutputStatus;
   connected_clients?: ConnectedClients;
+  color_palette: PaletteSlot[];
+  state_snapshots: (StateSnapshot | null)[];
+  button_mode: boolean;
 }
+
+export const PALETTE_SLOT_COUNT = 10;
+export const SNAPSHOT_SLOT_COUNT = 7;

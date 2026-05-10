@@ -8,7 +8,10 @@ use axum::{
 };
 use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
-use crate::state::{AppState, AppConfig, CueEntry, EffectState};
+use crate::state::{
+    AppState, AppConfig, CueEntry, EffectState,
+    PaletteSlot, StateSnapshot, PALETTE_SLOT_COUNT, SNAPSHOT_SLOT_COUNT,
+};
 use crate::state::fixture::{Color, Fixture};
 use crate::state::group::Group;
 
@@ -81,6 +84,42 @@ pub enum WsCommand {
         effect: EffectState,
     },
     ClearEffect,
+    SetPaletteSlot {
+        index: usize,
+        color: Option<Color>,
+    },
+    ApplyPaletteSlot {
+        index: usize,
+        fixture_ids: Vec<usize>,
+    },
+    SaveSnapshot {
+        index: usize,
+        label: String,
+    },
+    RecallSnapshot {
+        index: usize,
+    },
+    ClearSnapshot {
+        index: usize,
+    },
+    SetFixtureSync {
+        fixture_id: usize,
+        sync_fader: bool,
+        sync_knob: bool,
+    },
+    SetFixtureOn {
+        fixture_id: usize,
+        on: bool,
+    },
+    SetButtonMode {
+        enabled: bool,
+    },
+    ApplyMasterFader {
+        value: f64,
+    },
+    ApplyMasterKnob {
+        value: f64,
+    },
 }
 
 #[derive(Debug, Serialize)]
@@ -288,8 +327,122 @@ fn process_command(state: &AppState, cmd: WsCommand) {
         WsCommand::ClearEffect => {
             lighting.effect = EffectState::default();
         }
+        WsCommand::SetPaletteSlot { index, color } => {
+            if index < PALETTE_SLOT_COUNT {
+                ensure_palette_len(&mut lighting);
+                if let Some(slot) = lighting.color_palette.get_mut(index) {
+                    *slot = PaletteSlot { color };
+                }
+            }
+        }
+        WsCommand::ApplyPaletteSlot { index, fixture_ids } => {
+            if index < PALETTE_SLOT_COUNT {
+                ensure_palette_len(&mut lighting);
+                let color = lighting
+                    .color_palette
+                    .get(index)
+                    .and_then(|s| s.color.clone())
+                    .unwrap_or_else(|| Color { r: 0.0, g: 0.0, b: 0.0 });
+                let target_ids: Vec<usize> = if fixture_ids.is_empty() {
+                    (0..lighting.fixtures.len()).collect()
+                } else {
+                    fixture_ids
+                };
+                for id in target_ids {
+                    if let Some(f) = lighting.fixtures.get_mut(id) {
+                        f.color = color.clone();
+                    }
+                }
+            }
+        }
+        WsCommand::SaveSnapshot { index, label } => {
+            if index < SNAPSHOT_SLOT_COUNT {
+                ensure_snapshot_len(&mut lighting);
+                let snapshot = StateSnapshot {
+                    label,
+                    fixtures: lighting.fixtures.clone(),
+                };
+                if let Some(slot) = lighting.state_snapshots.get_mut(index) {
+                    *slot = Some(snapshot);
+                }
+            }
+        }
+        WsCommand::RecallSnapshot { index } => {
+            if index < SNAPSHOT_SLOT_COUNT {
+                ensure_snapshot_len(&mut lighting);
+                let snapshot_opt = lighting.state_snapshots.get(index).cloned().flatten();
+                if let Some(snapshot) = snapshot_opt {
+                    let live_sync: Vec<(bool, bool)> = lighting
+                        .fixtures
+                        .iter()
+                        .map(|f| (f.sync_master_fader, f.sync_master_knob))
+                        .collect();
+                    let count = snapshot.fixtures.len().min(lighting.fixtures.len());
+                    for i in 0..count {
+                        let mut copy = snapshot.fixtures[i].clone();
+                        if let Some(sync) = live_sync.get(i) {
+                            copy.sync_master_fader = sync.0;
+                            copy.sync_master_knob = sync.1;
+                        }
+                        lighting.fixtures[i] = copy;
+                    }
+                }
+            }
+        }
+        WsCommand::ClearSnapshot { index } => {
+            if index < SNAPSHOT_SLOT_COUNT {
+                ensure_snapshot_len(&mut lighting);
+                if let Some(slot) = lighting.state_snapshots.get_mut(index) {
+                    *slot = None;
+                }
+            }
+        }
+        WsCommand::SetFixtureSync { fixture_id, sync_fader, sync_knob } => {
+            if let Some(f) = lighting.fixtures.get_mut(fixture_id) {
+                f.sync_master_fader = sync_fader;
+                f.sync_master_knob = sync_knob;
+            }
+        }
+        WsCommand::SetFixtureOn { fixture_id, on } => {
+            if let Some(f) = lighting.fixtures.get_mut(fixture_id) {
+                f.is_on = on;
+            }
+        }
+        WsCommand::SetButtonMode { enabled } => {
+            lighting.button_mode = enabled;
+        }
+        WsCommand::ApplyMasterFader { value } => {
+            let v = value.clamp(0.0, 1.0);
+            let tilt = v * 360.0 - 180.0;
+            for f in lighting.fixtures.iter_mut() {
+                if f.sync_master_fader {
+                    f.tilt = tilt;
+                }
+            }
+        }
+        WsCommand::ApplyMasterKnob { value } => {
+            let v = value.clamp(0.0, 1.0);
+            let pan = v * 360.0 - 180.0;
+            for f in lighting.fixtures.iter_mut() {
+                if f.sync_master_knob {
+                    f.pan = pan;
+                }
+            }
+        }
     }
 
     drop(lighting);
     state.bump_version();
+}
+
+fn ensure_palette_len(lighting: &mut crate::state::LightingState) {
+    while lighting.color_palette.len() < PALETTE_SLOT_COUNT {
+        lighting.color_palette.push(PaletteSlot::default());
+    }
+}
+
+fn ensure_snapshot_len(lighting: &mut crate::state::LightingState) {
+    while lighting.state_snapshots.len() < SNAPSHOT_SLOT_COUNT {
+        lighting.state_snapshots.push(None);
+    }
 }

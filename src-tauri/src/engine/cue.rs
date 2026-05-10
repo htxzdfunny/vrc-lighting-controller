@@ -34,6 +34,9 @@ fn interpolate_fixture(a: &Fixture, b: &Fixture, t: f64) -> Fixture {
         dimmer: lerp(a.dimmer, b.dimmer, t),
         strobe_on: if t < 0.5 { a.strobe_on } else { b.strobe_on },
         strobe_speed: lerp(a.strobe_speed, b.strobe_speed, t),
+        is_on: if t < 0.5 { a.is_on } else { b.is_on },
+        sync_master_fader: if t < 0.5 { a.sync_master_fader } else { b.sync_master_fader },
+        sync_master_knob: if t < 0.5 { a.sync_master_knob } else { b.sync_master_knob },
     }
 }
 

@@ -1,5 +1,6 @@
 pub mod fixture;
 pub mod group;
+pub mod palette;
 pub mod preset;
 
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -9,9 +10,20 @@ use tauri::Emitter;
 
 use fixture::Fixture;
 use group::Group;
+pub use palette::{PaletteSlot, StateSnapshot};
 
 pub const MAX_FIXTURES: usize = 32;
 pub const DEFAULT_FIXTURE_COUNT: usize = 10;
+pub const PALETTE_SLOT_COUNT: usize = 10;
+pub const SNAPSHOT_SLOT_COUNT: usize = 7;
+
+fn default_palette() -> Vec<PaletteSlot> {
+    (0..PALETTE_SLOT_COUNT).map(|_| PaletteSlot::default()).collect()
+}
+
+fn default_snapshots() -> Vec<Option<StateSnapshot>> {
+    (0..SNAPSHOT_SLOT_COUNT).map(|_| None).collect()
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EffectState {
@@ -143,6 +155,12 @@ pub struct LightingState {
     pub config: AppConfig,
     pub output_status: OutputStatus,
     pub connected_clients: ConnectedClients,
+    #[serde(default = "default_palette")]
+    pub color_palette: Vec<PaletteSlot>,
+    #[serde(default = "default_snapshots")]
+    pub state_snapshots: Vec<Option<StateSnapshot>>,
+    #[serde(default)]
+    pub button_mode: bool,
 }
 
 impl Default for LightingState {
@@ -160,6 +178,9 @@ impl Default for LightingState {
             config: AppConfig::default(),
             output_status: OutputStatus::default(),
             connected_clients: ConnectedClients::default(),
+            color_palette: default_palette(),
+            state_snapshots: default_snapshots(),
+            button_mode: false,
         }
     }
 }

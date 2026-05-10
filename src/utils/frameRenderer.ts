@@ -162,10 +162,12 @@ export function renderFrameToCanvas(
       !fixture.strobe_on ||
       fixture.strobe_speed <= 0 ||
       Math.sin(nowSecs * fixture.strobe_speed * Math.PI * 2) > 0;
+    const isOn = fixture.is_on !== false;
     const k = clamp(fixture.dimmer, 0, 1);
-    const bR = strobeVisible ? Math.round(clamp(effectiveColor.r * k, 0, 1) * 255) : 0;
-    const bG = strobeVisible ? Math.round(clamp(effectiveColor.g * k, 0, 1) * 255) : 0;
-    const bB = strobeVisible ? Math.round(clamp(effectiveColor.b * k, 0, 1) * 255) : 0;
+    const visible = isOn && strobeVisible;
+    const bR = visible ? Math.round(clamp(effectiveColor.r * k, 0, 1) * 255) : 0;
+    const bG = visible ? Math.round(clamp(effectiveColor.g * k, 0, 1) * 255) : 0;
+    const bB = visible ? Math.round(clamp(effectiveColor.b * k, 0, 1) * 255) : 0;
     fillRect(
       data,
       width,

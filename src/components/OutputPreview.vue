@@ -26,6 +26,9 @@ function renderLoop() {
         ndi: { state: "disabled", message: null },
         spout: { state: "disabled", message: null },
       },
+      color_palette: store.color_palette,
+      state_snapshots: store.state_snapshots,
+      button_mode: store.button_mode,
     };
     renderFrameToCanvas(cvs, state, Date.now(), {
       width: 90,
