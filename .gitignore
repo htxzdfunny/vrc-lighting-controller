@@ -24,9 +24,16 @@ desktop.ini
 *~
 .vscode/settings.json
 
-# Cursor
+# AI development tools / local assistant rules
 .cursor/
 .claude/
+.codex/
+.continue/
+.windsurf/
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.aider*
 
 # Environment
 .env
@@ -35,6 +42,9 @@ desktop.ini
 
 # Tauri
 src-tauri/gen/
+src-tauri/resources/runtime/win-x64/spout/*.dll
+src-tauri/resources/runtime/win-x64/ndi/*.dll
+src-tauri/resources/runtime/win-x64/runtime-manifest.json
 
 # Rust
 **/*.rs.bk

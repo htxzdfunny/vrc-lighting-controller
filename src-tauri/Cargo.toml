@@ -44,7 +44,12 @@ default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
 
 [profile.release]
-lto = "thin"
-codegen-units = 4
-opt-level = 2
-strip = true
+# Build-speed-first profile for fast local packaging.
+# Use "strict" CI pipelines to enforce heavier optimizations if needed.
+lto = false
+codegen-units = 64
+opt-level = 1
+strip = "debuginfo"
+incremental = true
+debug = 0
+panic = "abort"

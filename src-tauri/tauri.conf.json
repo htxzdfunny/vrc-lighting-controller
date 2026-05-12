@@ -7,7 +7,11 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
     "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build"
+    "beforeBuildCommand": "pnpm build",
+    "beforeBundleCommand": {
+      "script": "node scripts/prepare-runtime-deps.mjs",
+      "cwd": ".."
+    }
   },
   "app": {
     "windows": [
@@ -33,6 +37,31 @@
     ],
     "security": {
       "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "resources": {
+      "resources/runtime/win-x64/spout/*.dll": "",
+      "resources/runtime/win-x64/ndi/*.dll": ""
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "embedBootstrapper",
+        "silent": false
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": [
+          "SimpChinese",
+          "English"
+        ],
+        "displayLanguageSelector": true,
+        "installerHooks": "installer-hooks.nsh"
+      }
     }
   }
 }

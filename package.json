@@ -6,7 +6,9 @@
   "packageManager": "pnpm@10.24.0",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "vite build",
+    "build:strict": "vue-tsc --noEmit && vite build",
+    "prepare:runtime-deps": "node scripts/prepare-runtime-deps.mjs",
     "preview": "vite preview",
     "tauri": "tauri"
   },

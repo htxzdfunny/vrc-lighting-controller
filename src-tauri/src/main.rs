@@ -12,6 +12,7 @@ use std::sync::Arc;
 use tauri::Manager;
 use state::AppState;
 
+
 #[tauri::command]
 fn get_app_version() -> String {
     if cfg!(debug_assertions) {
@@ -61,9 +62,6 @@ fn main() {
         render::run_render_loop(render_state);
     });
 
-    output::ndi::start_ndi_output(app_state.clone());
-    output::spout::start_spout_output(app_state.clone());
-
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .manage(app_state.clone())
@@ -82,6 +80,11 @@ fn main() {
             // Inject the AppHandle so bump_version() can emit "state-changed" events
             // to the frontend, keeping the desktop UI in sync with WS-driven updates.
             state.set_app_handle(app.handle().clone());
+
+            let runtime_state = state.inner().clone();
+            output::ndi::start_ndi_output(runtime_state.clone());
+            output::spout::start_spout_output(runtime_state);
+
             let visible = {
                 let lighting = state.lighting.read();
                 lighting.config.output_window_visible

@@ -52,11 +52,30 @@ pnpm tauri build
 
 构建产物位于 `src-tauri/target/release/bundle/`。
 
+Windows 打包流程（安装包即装即用，无需额外依赖）：
+
+- Spout DLL（`Spout.dll` / `SpoutLibrary.dll`）由 `rust-spout2` 在 `cargo build` 阶段生成，`scripts/prepare-runtime-deps.mjs` 作为 `beforeBundleCommand` 自动从 `src-tauri/target/<profile>/` 拷入资源目录。
+- NDI DLL（`Processing.NDI.Lib.x64.dll`）由同一脚本自动从开发机的 NDI SDK 或系统 PATH 中找到并拷入资源目录；最终随 NSIS 一起分发，目标机无需安装 NDI Runtime。
+  - 找不到 DLL 时会直接终止构建，避免再产出残缺安装包。
+  - 重新分发 NDI 运行库需自行遵守 [NDI 重分发条款](https://ndi.video/sdk/eula/)。
+- VC++ 运行库：NSIS 安装器在安装前会检测 `vcruntime140.dll`/`vcruntime140_1.dll`，缺失则提示安装 VC++ 2015–2022 Redistributable (x64)。
+
+可选环境变量：
+
+- `VRC_BUNDLE_PROFILE`：覆盖 cargo profile（默认按 `TAURI_ENV_DEBUG` 自动判 `debug`/`release`）
+- `NDI_SDK_DIR` 或 `VRC_RUNTIME_NDI_DIR`：指定 NDI DLL 所在目录（脚本默认会扫描 PATH 与常见安装路径）
+
+### 构建性能模式
+
+- 默认 `pnpm build` 已切换为极速模式（仅 `vite build`，不做 `vue-tsc`）。
+- 若需要严格类型校验，请手动执行 `pnpm run build:strict`。
+- Rust release profile 也已改为构建速度优先（高并行、禁用 LTO、增大 codegen-units）。
+
 ## 远程控制
 
 启动程序后，同一局域网内的设备在浏览器中访问：
 
-```
+```text
 http://<你的IP>:9000
 ```
 
@@ -73,6 +92,7 @@ http://<你的IP>:9000
 ### 简要说明
 
 每灯占 2 个色块（块宽 42，高度按灯数动态填满 720），输出画布 90x720（仅保留色块区域）：
+
 - **Block A**（角度）：R = Tilt 编码，G = Pan 编码
 - **Block B**（颜色）：RGB 直接映射灯光颜色 × 亮度
 
@@ -96,7 +116,7 @@ float pan  = angleColor.g * 360f - 180f;
 
 ## 项目结构
 
-```
+```text
 ├── src/                    # Vue 3 前端
 │   ├── components/         # UI 组件（XYPad, ColorWheel, FaderStrip 等）
 │   ├── layouts/            # 布局组件
